@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2f7d5d">
+<title>就活 Dashboard</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--ink:#1c1c1c;--sub:#666;--line:#e2e2de;--bg:#f7f7f4;--card:#fff;
+--green:#2f7d5d;--green-bg:#e4f1ea;--amber:#a06a00;--amber-bg:#fcf1d8;
+--red:#b3392f;--red-bg:#f9e4e1;--blue:#3a6ea5;--blue-bg:#e3edf6;--gray-bg:#ededea;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--bg);color:var(--ink);
+font-size:15px;line-height:1.6;padding:16px 12px 60px;}
+main{max-width:760px;margin:0 auto;}
+h1{font-size:19px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h1 small{font-size:13px;color:var(--sub);font-weight:400}
+h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:14px}
+.badge{display:inline-block;font-size:11.5px;border-radius:999px;padding:2px 9px;font-weight:600;white-space:nowrap}
+.b-green{background:var(--green-bg);color:var(--green)}.b-amber{background:var(--amber-bg);color:var(--amber)}
+.b-red{background:var(--red-bg);color:var(--red)}.b-blue{background:var(--blue-bg);color:var(--blue)}
+.b-gray{background:var(--gray-bg);color:var(--sub)}
+button{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:8px;
+padding:5px 11px;cursor:pointer;color:var(--ink)}
+button.primary{background:var(--green);border-color:var(--green);color:#fff}
+button:active{opacity:.7}
+label.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 2px;border-bottom:1px dashed var(--line);cursor:pointer}
+label.chk:last-child{border-bottom:none}
+label.chk input{margin-top:4px;width:16px;height:16px;accent-color:var(--green);flex:none}
+label.chk .t{flex:1}
+label.chk .d{font-size:12.5px;color:var(--sub)}
+label.chk input:checked ~ .t{color:var(--sub);text-decoration:line-through}
+.prog{height:6px;background:var(--gray-bg);border-radius:99px;overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .3s}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.comp{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff}
+.comp.dim{opacity:.55}
+.comp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.comp-head .nm{font-weight:600;font-size:14.5px;flex:1;min-width:140px}
+.comp-body{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+select,input[type=date],input[type=text]{font:inherit;font-size:13px;border:1px solid var(--line);
+border-radius:8px;padding:5px 8px;background:#fff;color:var(--ink)}
+input.memo{flex:1;min-width:150px}
+.dday{font-weight:700;font-size:12.5px}
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.hint{font-size:12.5px;color:var(--sub);margin-top:10px}
+footer{max-width:760px;margin:26px auto 0;font-size:12px;color:var(--sub);line-height:1.7}
+.summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.summary .s{background:var(--gray-bg);border-radius:10px;padding:8px 12px;font-size:12.5px}
+.summary .s b{display:block;font-size:17px}
+textarea.out{width:100%;height:120px;font-size:12px;font-family:ui-monospace,Menlo,monospace;
+border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px;display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>就活 Dashboard <small id="today"></small></h1>
+
+<section id="sec-week">
+  <h2>이번 주 루프 <button id="btn-newweek">새 주 시작</button></h2>
+  <div id="week-info" class="hint" style="margin:0 0 6px"></div>
+  <div id="week-list"></div>
+</section>
+
+<section>
+  <h2>인프라 체크리스트 (1회성)</h2>
+  <div id="infra-list"></div>
+  <div class="prog"><i id="infra-prog" style="width:0%"></i></div>
+</section>
+
+<section>
+  <h2>기업 판별 보드</h2>
+  <div class="summary" id="stats"></div>
+  <div class="tabs" id="tabs" style="margin-top:12px">
+    <button data-f="all" class="on">전체</button>
+    <button data-f="open">응모 가능 ○</button>
+    <button data-f="due">마감 임박</button>
+    <button data-f="active">진행 중</button>
+    <button data-f="star">★★★만</button>
+  </div>
+  <div id="comp-list"></div>
+  <div class="rowbtns">
+    <button id="btn-add">+ 회사 추가</button>
+  </div>
+  <p class="hint">응모상태: ○ 응모 가능 / △ 추가모집·秋선고 가능성 / × 마감 / 28 = 28卒 전환.
+  마감일을 넣으면 D-day가 자동 표시됩니다 (7일 이내 빨강, 14일 이내 주황).</p>
+</section>
+
+<section>
+  <h2>데이터</h2>
+  <div class="rowbtns" style="margin-top:0">
+    <button id="btn-copy" class="primary">브리핑용 텍스트 복사</button>
+    <button id="btn-export">JSON 내보내기</button>
+    <button id="btn-import">JSON 가져오기</button>
+    <input type="file" id="file-import" accept=".json" style="display:none">
+  </div>
+  <textarea class="out" id="out" readonly></textarea>
+  <p class="hint">이 앱의 데이터는 <b>이 기기·이 브라우저에만</b> 저장됩니다 (기기 간 자동 동기화 없음).
+  기기를 옮길 때는 JSON 내보내기/가져오기를 사용하고,
+  주 1회 "브리핑용 텍스트 복사"로 현황을 Claude 채팅에 붙여넣으면 주간 브리핑을 받을 수 있습니다.</p>
+</section>
+
+</main>
+<footer>
+  就活 Dashboard v1 · 생성: 2026.07.10 (금) · 작성 모델: Claude Fable 5<br>
+  기업 목록은 예시 데이터입니다 · 채용 정보는 응모 전 반드시 공식 페이지에서 재확인
+</footer>
+
+<script>
+const SEED=[
+["① 보안 전문","예시 보안기업 A",3,"예시 메모: 설명회 일정 확인"],
+["① 보안 전문","예시 보안기업 B",2,""],
+["② 자사개발 Web계","예시 웹서비스 C",3,"예시 메모: 통년 채용"],
+["② 자사개발 Web계","예시 웹서비스 D",1,""],
+["③ 클라우드","예시 클라우드 E",2,""],
+["④ 대형 SIer","예시 SIer F",2,""],
+["⑤ 외자계","예시 컨설팅 G",1,"예시 메모: 공식 페이지 재확인"]
+];
+const INFRA=[
+["지원 현황 파일 만들기","회사별 응모 상태·마감일을 한곳에 모아 두는 기록 파일"],
+["ES 원문 모아 두기","제출한 ES는 마이페이지에서 복사해 한 파일에 보관. 미제출 초안도 [초안] 태그로 보존"],
+["기업 리스트 일원화","엑셀 한 파일을 마스터로 정하고 나머지는 참고용으로 표시"]
+];
+const WEEK=[
+["B-1 판별","★★★ 회사부터 응모 상태 기입 (주초 1~2시간)"],
+["B-2 ES 작성","○ 회사 1곳 골라 초안 작성·첨삭"],
+["B-3 제출·기록","마이페이지 제출 → 지원 현황 파일에 기록"],
+["B-4 주간 브리핑","브리핑용 텍스트 복사 → Claude에 붙여넣기"]
+];
+const STATUSES=["미확인","○","△","×","28"];
+const STAGES=["-","ES작성중","ES제출","서류통과","WEBテスト","GD","1차면접","2차면접","최종면접","内定","불합격","보류"];
+const KEY="shukatsu-dash-v1";
+let S=load();
+function load(){
+  try{const d=JSON.parse(localStorage.getItem(KEY));if(d)return d;}catch(e){}
+  return {infra:INFRA.map(()=>false),week:{start:null,done:WEEK.map(()=>false)},
+    comps:SEED.map((c,i)=>({id:"s"+i,bucket:c[0],name:c[1],star:c[2],note:c[3],st:"미확인",due:"",stage:"-",memo:""})),filter:"all"};
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(S));}
+const $=q=>document.querySelector(q);
+const days=["일","월","화","수","목","금","토"];
+function fmt(d){return d.getFullYear()+"."+String(d.getMonth()+1).padStart(2,"0")+"."+String(d.getDate()).padStart(2,"0")+" ("+days[d.getDay()]+")";}
+$("#today").textContent="오늘: "+fmt(new Date());
+function dday(s){if(!s)return null;const t=new Date();t.setHours(0,0,0,0);
+  const d=new Date(s+"T00:00:00");return Math.round((d-t)/86400000);}
+function esc(x){return String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+function renderWeek(){
+  $("#week-info").textContent=S.week.start?("주 시작일: "+S.week.start):"「새 주 시작」을 누르면 이번 주 루프가 리셋됩니다.";
+  $("#week-list").innerHTML=WEEK.map((w,i)=>
+   `<label class="chk"><input type="checkbox" data-w="${i}" ${S.week.done[i]?"checked":""}>
+    <span class="t"><b>${esc(w[0])}</b><span class="d"> — ${esc(w[1])}</span></span></label>`).join("");
+  document.querySelectorAll("[data-w]").forEach(el=>el.onchange=()=>{S.week.done[+el.dataset.w]=el.checked;save();});
+}
+$("#btn-newweek").onclick=()=>{if(confirm("이번 주 루프 체크를 리셋할까요?")){S.week={start:fmt(new Date()),done:WEEK.map(()=>false)};save();renderWeek();}};
+
+function renderInfra(){
+  $("#infra-list").innerHTML=INFRA.map((f,i)=>
+   `<label class="chk"><input type="checkbox" data-i="${i}" ${S.infra[i]?"checked":""}>
+    <span class="t"><b>${esc(f[0])}</b><span class="d"> — ${esc(f[1])}</span></span></label>`).join("");
+  document.querySelectorAll("[data-i]").forEach(el=>el.onchange=()=>{S.infra[+el.dataset.i]=el.checked;save();renderInfra();});
+  $("#infra-prog").style.width=(S.infra.filter(Boolean).length/INFRA.length*100)+"%";
+}
+
+function stBadge(st){const m={"○":"b-green","△":"b-amber","×":"b-red","28":"b-blue","미확인":"b-gray"};return `<span class="badge ${m[st]}">${st}</span>`;}
+function visible(c){
+  const f=S.filter,d=dday(c.due);
+  if(f==="open")return c.st==="○";
+  if(f==="due")return d!==null&&d<=14&&c.st!=="×";
+  if(f==="active")return c.stage!=="-";
+  if(f==="star")return c.star===3;
+  return true;
+}
+function renderComps(){
+  const list=S.comps.slice().sort((a,b)=>{
+    const da=dday(a.due),db=dday(b.due);
+    if(da===null&&db===null)return b.star-a.star;
+    if(da===null)return 1;if(db===null)return -1;return da-db;});
+  $("#comp-list").innerHTML=list.map(c=>{
+    if(!visible(c))return "";
+    const d=dday(c.due);
+    let dd="";
+    if(d!==null){const cl=d<0?"b-gray":d<=7?"b-red":d<=14?"b-amber":"b-blue";
+      dd=`<span class="badge ${cl} dday">${d<0?"마감 경과":"D-"+d}</span>`;}
+    return `<div class="comp ${c.st==="×"?"dim":""}">
+     <div class="comp-head">
+       <span class="nm">${esc(c.name)}</span>
+       ${stBadge(c.st)} ${dd}
+       <span class="badge b-gray">${"★".repeat(c.star)}${"☆".repeat(3-c.star)}</span>
+     </div>
+     <div class="d" style="font-size:12px;color:var(--sub)">${esc(c.bucket)}${c.note?" · "+esc(c.note):""}</div>
+     <div class="comp-body">
+       <select data-k="st" data-id="${c.id}">${STATUSES.map(s=>`<option ${s===c.st?"selected":""}>${s}</option>`).join("")}</select>
+       <select data-k="stage" data-id="${c.id}">${STAGES.map(s=>`<option ${s===c.stage?"selected":""}>${s}</option>`).join("")}</select>
+       <input type="date" data-k="due" data-id="${c.id}" value="${c.due}">
+       <input type="text" class="memo" placeholder="메모" data-k="memo" data-id="${c.id}" value="${esc(c.memo)}">
+     </div></div>`;}).join("")||`<p class="hint">해당 조건의 회사가 없습니다.</p>`;
+  document.querySelectorAll("#comp-list select,#comp-list input").forEach(el=>{
+    el.onchange=()=>{const c=S.comps.find(x=>x.id===el.dataset.id);c[el.dataset.k]=el.value;save();renderComps();renderStats();};});
+}
+function renderStats(){
+  const n=s=>S.comps.filter(c=>c.st===s).length;
+  const act=S.comps.filter(c=>c.stage!=="-"&&c.stage!=="불합격"&&c.stage!=="보류").length;
+  const sub=S.comps.filter(c=>["ES제출","서류통과","WEBテスト","GD","1차면접","2차면접","최종면접","内定"].includes(c.stage)).length;
+  $("#stats").innerHTML=`<div class="s"><b>${n("미확인")}</b>미확인</div><div class="s"><b>${n("○")}</b>응모 가능</div>
+  <div class="s"><b>${act}</b>진행 중</div><div class="s"><b>${sub}</b>제출 완료</div>`;
+}
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+  S.filter=b.dataset.f;save();
+  document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));renderComps();});
+
+$("#btn-add").onclick=()=>{const name=prompt("회사명");if(!name)return;
+  S.comps.push({id:"u"+Date.now(),bucket:"직접 추가",name,star:2,note:"",st:"미확인",due:"",stage:"-",memo:""});
+  save();renderComps();renderStats();};
+
+$("#btn-copy").onclick=async()=>{
+  const t=new Date();
+  let out=`[就活 현황 · ${fmt(t)} 기준]\n`;
+  out+=`인프라: ${S.infra.filter(Boolean).length}/${INFRA.length} 완료\n`;
+  out+=`이번 주 루프: ${S.week.done.filter(Boolean).length}/4 (시작 ${S.week.start||"-"})\n\n`;
+  const rows=S.comps.filter(c=>c.st!=="미확인"||c.stage!=="-"||c.due);
+  out+=rows.length?rows.map(c=>{
+    const d=dday(c.due);
+    return `- ${c.name} | 상태 ${c.st} | 단계 ${c.stage}${c.due?` | 마감 ${c.due}${d!==null?` (D${d>=0?"-"+d:"+"+(-d)})`:""}`:""}${c.memo?` | ${c.memo}`:""}`;
+  }).join("\n"):"(기입된 회사 없음)";
+  out+=`\n\n→ 이 텍스트를 Claude에 붙여넣고: 「주간 브리핑. ①마감 임박순 정렬 ②이번 주 액션 3개 ③리스크 1개」`;
+  const ta=$("#out");ta.value=out;ta.style.display="block";
+  try{await navigator.clipboard.writeText(out);alert("복사 완료. Claude 채팅에 붙여넣으세요.");}
+  catch(e){ta.select();alert("자동 복사 실패 — 아래 텍스트를 길게 눌러 복사하세요.");}
+};
+$("#btn-export").onclick=()=>{
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:"application/json"}));
+  a.download="shukatsu-dash-backup.json";a.click();};
+$("#btn-import").onclick=()=>$("#file-import").click();
+$("#file-import").onchange=e=>{const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>{try{S=JSON.parse(r.result);save();init();alert("가져오기 완료");}
+  catch(x){alert("파일을 읽을 수 없습니다");}};r.readAsText(f);};
+
+function init(){renderWeek();renderInfra();renderComps();renderStats();
+  document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.f===S.filter));}
+init();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
