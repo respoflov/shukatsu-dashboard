@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 就活 Dashboard: 취업 준비용 개인 대시보드 PWA. 화면·스타일·로직을 이 파일 하나에 담았다 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -111,6 +112,7 @@ border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px;displa
 </footer>
 
 <script>
+// 기업 목록 기본값(공개용 예시 데이터). 항목 형식: [분류, 회사 이름, 우선순위 별 개수, 메모]
 const SEED=[
 ["① 보안 전문","예시 보안기업 A",3,"예시 메모: 설명회 일정 확인"],
 ["① 보안 전문","예시 보안기업 B",2,""],
@@ -120,35 +122,48 @@ const SEED=[
 ["④ 대형 SIer","예시 SIer F",2,""],
 ["⑤ 외자계","예시 컨설팅 G",1,"예시 메모: 공식 페이지 재확인"]
 ];
+// 준비 체크리스트 기본 항목. 형식: [할 일, 설명]
 const INFRA=[
 ["지원 현황 파일 만들기","회사별 응모 상태·마감일을 한곳에 모아 두는 기록 파일"],
 ["ES 원문 모아 두기","제출한 ES는 마이페이지에서 복사해 한 파일에 보관. 미제출 초안도 [초안] 태그로 보존"],
 ["기업 리스트 일원화","엑셀 한 파일을 마스터로 정하고 나머지는 참고용으로 표시"]
 ];
+// 매주 반복하는 루프 항목. 형식: [단계 이름, 설명]
 const WEEK=[
 ["B-1 판별","★★★ 회사부터 응모 상태 기입 (주초 1~2시간)"],
 ["B-2 ES 작성","○ 회사 1곳 골라 초안 작성·첨삭"],
 ["B-3 제출·기록","마이페이지 제출 → 지원 현황 파일에 기록"],
 ["B-4 주간 브리핑","브리핑용 텍스트 복사 → Claude에 붙여넣기"]
 ];
+// 응모 상태 값 (○ 가능 / △ 추가모집 가능성 / × 마감 / 28 = 다음 연도 전환)
 const STATUSES=["미확인","○","△","×","28"];
+// 전형 진행 단계 목록 (선택 상자에 순서대로 나온다)
 const STAGES=["-","ES작성중","ES제출","서류통과","WEBテスト","GD","1차면접","2차면접","최종면접","内定","불합격","보류"];
+// localStorage 저장 키
 const KEY="shukatsu-dash-v1";
+// 앱 전체 상태. 저장된 값이 있으면 불러오고 없으면 기본값으로 시작한다
 let S=load();
+// 저장된 상태를 읽는다. 없거나 깨져 있으면 기본 목록으로 새 상태를 만든다
 function load(){
   try{const d=JSON.parse(localStorage.getItem(KEY));if(d)return d;}catch(e){}
   return {infra:INFRA.map(()=>false),week:{start:null,done:WEEK.map(()=>false)},
     comps:SEED.map((c,i)=>({id:"s"+i,bucket:c[0],name:c[1],star:c[2],note:c[3],st:"미확인",due:"",stage:"-",memo:""})),filter:"all"};
 }
+// 현재 상태를 localStorage에 저장한다
 function save(){localStorage.setItem(KEY,JSON.stringify(S));}
+// querySelector 줄임 함수
 const $=q=>document.querySelector(q);
 const days=["일","월","화","수","목","금","토"];
+// 날짜를 "YYYY.MM.DD (요일)" 형식으로 바꾼다
 function fmt(d){return d.getFullYear()+"."+String(d.getMonth()+1).padStart(2,"0")+"."+String(d.getDate()).padStart(2,"0")+" ("+days[d.getDay()]+")";}
 $("#today").textContent="오늘: "+fmt(new Date());
+// 마감일 문자열까지 남은 일수를 계산한다 (지났으면 음수, 없으면 null)
 function dday(s){if(!s)return null;const t=new Date();t.setHours(0,0,0,0);
   const d=new Date(s+"T00:00:00");return Math.round((d-t)/86400000);}
+// HTML에 넣기 전에 특수문자를 이스케이프한다
 function esc(x){return String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
+// 주간 루프 체크 목록을 그린다
 function renderWeek(){
   $("#week-info").textContent=S.week.start?("주 시작일: "+S.week.start):"「새 주 시작」을 누르면 이번 주 루프가 리셋됩니다.";
   $("#week-list").innerHTML=WEEK.map((w,i)=>
@@ -158,6 +173,7 @@ function renderWeek(){
 }
 $("#btn-newweek").onclick=()=>{if(confirm("이번 주 루프 체크를 리셋할까요?")){S.week={start:fmt(new Date()),done:WEEK.map(()=>false)};save();renderWeek();}};
 
+// 준비 체크리스트와 진행률 막대를 그린다
 function renderInfra(){
   $("#infra-list").innerHTML=INFRA.map((f,i)=>
    `<label class="chk"><input type="checkbox" data-i="${i}" ${S.infra[i]?"checked":""}>
@@ -166,7 +182,9 @@ function renderInfra(){
   $("#infra-prog").style.width=(S.infra.filter(Boolean).length/INFRA.length*100)+"%";
 }
 
+// 응모 상태 값에 맞는 색 배지 HTML을 만든다
 function stBadge(st){const m={"○":"b-green","△":"b-amber","×":"b-red","28":"b-blue","미확인":"b-gray"};return `<span class="badge ${m[st]}">${st}</span>`;}
+// 현재 필터(응모 가능·마감 임박·진행 중·★★★)에 이 회사가 보이는지 판단한다
 function visible(c){
   const f=S.filter,d=dday(c.due);
   if(f==="open")return c.st==="○";
@@ -175,6 +193,7 @@ function visible(c){
   if(f==="star")return c.star===3;
   return true;
 }
+// 기업 카드 목록을 그린다. 마감일이 가까운 순, 마감일이 없으면 별 개수 순으로 정렬한다
 function renderComps(){
   const list=S.comps.slice().sort((a,b)=>{
     const da=dday(a.due),db=dday(b.due);
@@ -182,6 +201,7 @@ function renderComps(){
     if(da===null)return 1;if(db===null)return -1;return da-db;});
   $("#comp-list").innerHTML=list.map(c=>{
     if(!visible(c))return "";
+    // 마감일까지 남은 일수에 따라 D-day 배지 색을 정한다 (7일 이내 빨강, 14일 이내 주황)
     const d=dday(c.due);
     let dd="";
     if(d!==null){const cl=d<0?"b-gray":d<=7?"b-red":d<=14?"b-amber":"b-blue";
@@ -202,6 +222,7 @@ function renderComps(){
   document.querySelectorAll("#comp-list select,#comp-list input").forEach(el=>{
     el.onchange=()=>{const c=S.comps.find(x=>x.id===el.dataset.id);c[el.dataset.k]=el.value;save();renderComps();renderStats();};});
 }
+// 상단 통계(상태별 회사 수, 진행 중·제출 이후 단계 수)를 그린다
 function renderStats(){
   const n=s=>S.comps.filter(c=>c.st===s).length;
   const act=S.comps.filter(c=>c.stage!=="-"&&c.stage!=="불합격"&&c.stage!=="보류").length;
@@ -212,11 +233,13 @@ function renderStats(){
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
   S.filter=b.dataset.f;save();
   document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));renderComps();});
+// 「+ 회사 추가」: 이름을 입력받아 목록 끝에 새 회사를 넣는다
 
 $("#btn-add").onclick=()=>{const name=prompt("회사명");if(!name)return;
   S.comps.push({id:"u"+Date.now(),bucket:"직접 추가",name,star:2,note:"",st:"미확인",due:"",stage:"-",memo:""});
   save();renderComps();renderStats();};
 
+// Claude에 붙여넣을 주간 브리핑용 텍스트를 만든다
 $("#btn-copy").onclick=async()=>{
   const t=new Date();
   let out=`[就活 현황 · ${fmt(t)} 기준]\n`;
@@ -232,18 +255,22 @@ $("#btn-copy").onclick=async()=>{
   try{await navigator.clipboard.writeText(out);alert("복사 완료. Claude 채팅에 붙여넣으세요.");}
   catch(e){ta.select();alert("자동 복사 실패 — 아래 텍스트를 길게 눌러 복사하세요.");}
 };
+// 전체 상태를 JSON 파일로 내려받는다 (기기 이동·백업용)
 $("#btn-export").onclick=()=>{
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:"application/json"}));
   a.download="shukatsu-dash-backup.json";a.click();};
+// JSON 파일을 골라 상태를 통째로 덮어쓴다
 $("#btn-import").onclick=()=>$("#file-import").click();
 $("#file-import").onchange=e=>{const f=e.target.files[0];if(!f)return;
   const r=new FileReader();r.onload=()=>{try{S=JSON.parse(r.result);save();init();alert("가져오기 완료");}
   catch(x){alert("파일을 읽을 수 없습니다");}};r.readAsText(f);};
 
+// 모든 영역을 다시 그리고 필터 버튼 선택 상태를 맞춘다
 function init(){renderWeek();renderInfra();renderComps();renderStats();
   document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.f===S.filter));}
 init();
+// HTTPS 환경이면 서비스 워커를 등록해 오프라인 캐시를 켠다
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
