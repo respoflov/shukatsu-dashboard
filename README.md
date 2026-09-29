@@ -30,3 +30,9 @@
 기업 목록·체크리스트를 바꾸고 싶으면 index.html의 상단 `SEED` / `INFRA` / `WEEK` 배열을 수정하거나,
 Claude에게 "대시보드에 ○○ 반영해서 index.html 다시 만들어줘"라고 요청하세요.
 (sw.js의 CACHE 버전 문자열을 v2로 올리면 기존 설치에도 갱신이 반영됩니다)
+
+## 라이선스
+
+Copyright 2026 respoflov
+
+이 저장소의 코드는 [Apache License 2.0](LICENSE)을 따릅니다. 앱이 사용하는 외부 폰트·라이브러리는 각자의 라이선스를 따릅니다.
